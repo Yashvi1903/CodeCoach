@@ -1,20 +1,29 @@
-from langchain_core.prompts import FewShotPromptTemplate,PromptTemplate
-from pydantic import BaseModel,Field
+from langchain_core.prompts import FewShotPromptTemplate, PromptTemplate
+from pydantic import BaseModel, Field
 from app.llm.client import generate_structured
 
-class ConstraintExtraction(BaseModel):
-   class ConstraintExtraction(BaseModel):
-    max_n: int = Field(description="Upper bound of the structural input size (ignore element values like a_i <= 10^9).")
-    exact_quote_in_text: str = Field(description="Exact substring from the text containing this constraint.")
-    llm_proposed_big_o: str = Field(description="Proposed Big-O ceiling, e.g. 'O(N log N)', 'O(N^2)', 'O(N)'.")
 
+# 1. Shared Output Model
 class ComplexityResult(BaseModel):
-  max_n:int | None=None
-  big_o:str
-  label:str
-  verified:bool
+    big_o: str
+    label: str  # "Estimated" | "From constraints" | "From editorial" | "Inferred"
+    verified: bool
+    max_n: int | None = None
 
 
+class ConstraintExtraction(BaseModel):
+    max_n: int = Field(
+        description="Upper bound of the structural input size (ignore element values like a_i <= 10^9)."
+    )
+    exact_quote_in_text: str = Field(
+        description="Exact substring from the text containing this constraint."
+    )
+    proposed_big_o: str = Field(
+        description="Proposed Big-O ceiling, e.g. 'O(N log N)', 'O(N^2)', 'O(N)'."
+    )
+
+
+# 2. Few-Shot PromptTemplate Setup
 EXAMPLES = [
     {
         "input_text": "The first line contains t (1 <= t <= 10^4). Each test case contains n (1 <= n <= 2 * 10^5) followed by n integers a_i (1 <= a_i <= 10^9). The sum of n over all test cases does not exceed 2 * 10^5.",
@@ -30,9 +39,9 @@ EXAMPLES = [
     },
 ]
 
-EXAMPLE_PROMPT=PromptTemplate(
-  input_variables=["input_text","output_json"],
-  template="Input text: {input_text}\nOutput: {output_json}",
+EXAMPLE_PROMPT = PromptTemplate(
+    input_variables=["input_text", "output_json"],
+    template="Input text: {input_text}\nOutput: {output_json}",
 )
 
 CEILING_PROMPT = FewShotPromptTemplate(
@@ -53,16 +62,18 @@ CEILING_PROMPT = FewShotPromptTemplate(
     input_variables=["constraints_text"],
 )
 
-def _normalize_ws(s:str)->str:
-  return " ".join(s.split())
 
-def get_constraint_complexity(constraints_text:str,has_editorial:bool=False)->ComplexityResult:
-    formatted_prompt=CEILING_PROMPT.format(constraints_text=constraints_text)
-    extracted=generate_structured(
-      prompt=formatted_prompt,
-      schema=ConstraintExtraction,
-      use_strong_model=False,
-      temperature=0.1,
+def _normalize_ws(s: str) -> str:
+    return " ".join(s.split())
+
+
+def get_constraint_complexity(constraints_text: str, has_editorial: bool = False) -> ComplexityResult:
+    formatted_prompt = CEILING_PROMPT.format(constraints_text=constraints_text)
+    extracted = generate_structured(
+        prompt=formatted_prompt,
+        schema=ConstraintExtraction,
+        use_strong_model=False,
+        temperature=0.0,
     )
 
     verified = _normalize_ws(extracted.exact_quote_in_text) in _normalize_ws(constraints_text)

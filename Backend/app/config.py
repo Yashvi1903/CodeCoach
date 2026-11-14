@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     strong_model: str = "gemini-2.5-flash"
 
     class Config:
-        env_file=".env"
+        env_file=("Backend/.env",".env")
         extra="ignore"
 
 settings=Settings()

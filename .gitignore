@@ -1,0 +1,27 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+Backend/.env
+backend/.env
+*.env
+
+# Python cache & build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local SQLite databases & compiled C++ test binaries
+*.db
+*.sqlite3
+*.exe
+*.out
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
